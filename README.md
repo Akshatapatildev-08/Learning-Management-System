@@ -56,6 +56,17 @@ If your backend URL is different, set:
 VITE_API_BASE=http://localhost:5000/api
 ```
 
+## Vercel Deployment (Frontend)
+
+This repo is a monorepo. Deploy the frontend from the `frontend` directory.
+
+- Framework preset: `Vite`
+- Root Directory: `frontend`
+- Build Command: `npm run build`
+- Output Directory: `dist`
+
+SPA routing fix is included in `frontend/vercel.json` so React routes (for example `/courses/1`) do not return `NOT_FOUND` on refresh.
+
 ## Demo Users
 
 - `admin@lms.com / admin123`
