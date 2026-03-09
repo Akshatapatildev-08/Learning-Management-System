@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
 function getAuthHeaders() {
   const token = localStorage.getItem('lms_token');
@@ -6,16 +6,29 @@ function getAuthHeaders() {
 }
 
 async function request(path, options = {}) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-      ...getAuthHeaders(),
-    },
-  });
+  let res;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {}),
+        ...getAuthHeaders(),
+      },
+    });
+  } catch (_err) {
+    throw new Error('Unable to reach API. Check backend is running and VITE_API_BASE is correct.');
+  }
 
-  const data = await res.json();
+  const text = await res.text();
+  let data = {};
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch (_err) {
+      data = { message: text };
+    }
+  }
   if (!res.ok) throw new Error(data.message || 'Request failed');
   return data;
 }
