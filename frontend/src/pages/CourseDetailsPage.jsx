@@ -13,16 +13,23 @@ export default function CourseDetailsPage() {
   const { courseId } = useParams();
   const navigate = useNavigate();
   const [course, setCourse] = useState(null);
+  const [alreadyEnrolled, setAlreadyEnrolled] = useState(false);
   const [error, setError] = useState('');
+  const hasToken = Boolean(localStorage.getItem('lms_token'));
 
   const enroll = async () => {
+    if (!hasToken) {
+      navigate('/login');
+      return;
+    }
+
     setError('');
     try {
       await api.enroll(courseId);
-      navigate(`/learn/${courseId}`);
+      setAlreadyEnrolled(true);
     } catch (err) {
       if (err.message.includes('Already')) {
-        navigate(`/learn/${courseId}`);
+        setAlreadyEnrolled(true);
         return;
       }
       setError(err.message);
@@ -31,7 +38,18 @@ export default function CourseDetailsPage() {
 
   useEffect(() => {
     api.courseById(courseId).then(setCourse).catch((err) => setError(err.message));
-  }, [courseId]);
+    if (hasToken) {
+      api
+        .enrollmentsMine()
+        .then((enrolled) => {
+          const isEnrolled = enrolled.some((item) => Number(item.id) === Number(courseId));
+          setAlreadyEnrolled(isEnrolled);
+        })
+        .catch(() => setAlreadyEnrolled(false));
+    } else {
+      setAlreadyEnrolled(false);
+    }
+  }, [courseId, hasToken]);
 
   if (!course) return <p>Loading...</p>;
 
@@ -49,8 +67,11 @@ export default function CourseDetailsPage() {
         <p>Total duration: {formatDuration(course.total_duration_seconds)}</p>
         {error ? <p className="error">{error}</p> : null}
         <div className="row">
-          <Link to="/" className="btn btn-outline">Back</Link>
-          <button className="btn" onClick={enroll}>Enroll</button>
+          <Link to="/courses" className="btn btn-outline">Back</Link>
+          <button className="btn" onClick={enroll} disabled={alreadyEnrolled}>
+            {alreadyEnrolled ? 'Already Enrolled' : 'Enroll'}
+          </button>
+          {alreadyEnrolled ? <Link className="btn btn-outline" to={`/learn/${courseId}`}>Go to Learning</Link> : null}
         </div>
       </div>
     </section>

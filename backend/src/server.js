@@ -9,21 +9,29 @@ import learningRoutes from './routes/learning.js';
 import progressRoutes from './routes/progress.js';
 
 dotenv.config();
-initDb();
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+async function startServer() {
+  await initDb();
 
-app.get('/api/health', (_req, res) => res.json({ ok: true }));
+  const app = express();
+  app.use(cors());
+  app.use(express.json());
 
-app.use('/api/auth', authRoutes);
-app.use('/api/courses', coursesRoutes);
-app.use('/api/enrollments', enrollmentsRoutes);
-app.use('/api/learning', learningRoutes);
-app.use('/api/progress', progressRoutes);
+  app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
-const port = process.env.PORT || 5000;
-app.listen(port, () => {
-  console.log(`Backend running at http://localhost:${port}`);
+  app.use('/api/auth', authRoutes);
+  app.use('/api/courses', coursesRoutes);
+  app.use('/api/enrollments', enrollmentsRoutes);
+  app.use('/api/learning', learningRoutes);
+  app.use('/api/progress', progressRoutes);
+
+  const port = process.env.PORT || 5000;
+  app.listen(port, () => {
+    console.log(`Backend running at http://localhost:${port}`);
+  });
+}
+
+startServer().catch((err) => {
+  console.error('Failed to start backend:', err.message);
+  process.exit(1);
 });

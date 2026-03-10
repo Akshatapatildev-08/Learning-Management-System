@@ -19,6 +19,7 @@ body {
   padding: 1rem 1.5rem;
   background: #0f172a;
   color: #fff;
+  gap: 1rem;
 }
 
 .brand {
@@ -34,8 +35,17 @@ body {
   text-decoration: none;
 }
 
+.navbar nav {
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 .main-content {
   padding: 1.2rem;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .grid {
@@ -74,11 +84,26 @@ body {
   border: 1px solid #2563eb;
 }
 
+.badge {
+  display: inline-block;
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
 .row {
   display: flex;
   gap: 0.6rem;
   align-items: center;
   flex-wrap: wrap;
+}
+
+.row-space {
+  justify-content: space-between;
 }
 
 .muted {
@@ -117,6 +142,113 @@ body {
 .demo-text {
   color: #6b7280;
   font-size: 0.9rem;
+}
+
+.landing {
+  display: grid;
+  gap: 1.2rem;
+}
+
+.hero h1 {
+  margin-top: 0;
+}
+
+.landing-minimal {
+  gap: 1.5rem;
+}
+
+.minimal-hero {
+  background: #fff;
+  border-radius: 12px;
+  padding: 2rem;
+  border: 1px solid #e5e7eb;
+}
+
+.minimal-hero h1 {
+  margin: 0.25rem 0 0.65rem 0;
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+  line-height: 1.1;
+}
+
+.kicker {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.hero-actions {
+  margin-top: 0.85rem;
+}
+
+.minimal-divider {
+  height: 1px;
+  background: #d1d5db;
+}
+
+.preview-wrap h2 {
+  margin: 0;
+}
+
+.preview-head {
+  margin-bottom: 0.8rem;
+}
+
+.minimal-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.minimal-card {
+  border: 1px solid #e5e7eb;
+  box-shadow: none;
+}
+
+.preview-split {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 1rem;
+}
+
+.preview-featured {
+  border: 1px solid #e5e7eb;
+  box-shadow: none;
+}
+
+.preview-featured p {
+  margin-bottom: 0.6rem;
+}
+
+.featured-cta {
+  margin-top: 1rem;
+}
+
+.preview-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.preview-item {
+  border: 1px solid #e5e7eb;
+  box-shadow: none;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.preview-item h3 {
+  margin: 0.2rem 0 0.25rem;
+}
+
+.nav-link-dark {
+  color: #0f172a;
+  text-decoration: none;
+}
+
+.dashboard {
+  display: grid;
+  gap: 1.5rem;
 }
 
 .details {
@@ -189,6 +321,10 @@ body {
 @media (max-width: 900px) {
   .details,
   .learn-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .preview-split {
     grid-template-columns: 1fr;
   }
 }

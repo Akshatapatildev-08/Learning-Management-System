@@ -3,10 +3,17 @@ import LoginPage from './pages/LoginPage.jsx';
 import CoursesPage from './pages/CoursesPage.jsx';
 import CourseDetailsPage from './pages/CourseDetailsPage.jsx';
 import LearningPage from './pages/LearningPage.jsx';
+import LandingPage from './pages/LandingPage.jsx';
+import DashboardPage from './pages/DashboardPage.jsx';
 
 function authUser() {
   const raw = localStorage.getItem('lms_user');
-  return raw ? JSON.parse(raw) : null;
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 }
 
 function Protected({ children }) {
@@ -18,22 +25,34 @@ function Protected({ children }) {
 function NavBar() {
   const navigate = useNavigate();
   const user = authUser();
+  const isLoggedIn = Boolean(localStorage.getItem('lms_token'));
 
   const logout = () => {
     localStorage.removeItem('lms_token');
     localStorage.removeItem('lms_user');
-    navigate('/login');
+    sessionStorage.clear();
+    window.dispatchEvent(new Event('lms:logout'));
+    navigate('/login', { replace: true, state: { resetForm: true } });
   };
 
   return (
     <header className="navbar">
       <Link to="/" className="brand">LMS</Link>
       <nav>
-        <Link to="/" className="nav-link">Courses</Link>
-        {user ? (
-          <button onClick={logout} className="btn btn-outline">Logout ({user.name})</button>
+        <Link to="/" className="nav-link">Home</Link>
+        <Link to="/courses" className="nav-link">Courses</Link>
+        {isLoggedIn ? (
+          <>
+            <Link to="/dashboard" className="nav-link">Dashboard</Link>
+            <button onClick={logout} className="btn btn-outline">
+              {user?.name ? `Logout (${user.name})` : 'Logout'}
+            </button>
+          </>
         ) : (
-          <Link to="/login" className="btn btn-outline">Login</Link>
+          <>
+            <Link to="/login" className="btn btn-outline">Login</Link>
+            <Link to="/signup" className="btn">Signup</Link>
+          </>
         )}
       </nav>
     </header>
@@ -46,21 +65,22 @@ export default function App() {
       <NavBar />
       <main className="main-content">
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage initialMode="login" />} />
+          <Route path="/signup" element={<LoginPage initialMode="signup" />} />
+          <Route path="/courses" element={<CoursesPage />} />
           <Route
-            path="/"
+            path="/dashboard"
             element={
               <Protected>
-                <CoursesPage />
+                <DashboardPage />
               </Protected>
             }
           />
           <Route
             path="/courses/:courseId"
             element={
-              <Protected>
-                <CourseDetailsPage />
-              </Protected>
+              <CourseDetailsPage />
             }
           />
           <Route
@@ -71,6 +91,7 @@ export default function App() {
               </Protected>
             }
           />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
     </div>

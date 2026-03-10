@@ -1,32 +1,8 @@
 import bcrypt from 'bcryptjs';
-import db from './index.js';
+import { query, closePool } from './index.js';
 import { initDb } from './migrate.js';
 
-initDb();
-
 const hash = (password) => bcrypt.hashSync(password, 10);
-
-const existing = db.prepare('SELECT COUNT(*) as count FROM users').get();
-if (existing.count > 0) {
-  console.log('Seed skipped: data already exists.');
-  process.exit(0);
-}
-
-const insertUser = db.prepare(
-  'INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)'
-);
-
-insertUser.run('Admin User', 'admin@lms.com', hash('admin123'), 'admin');
-insertUser.run('Alice Instructor', 'alice@lms.com', hash('instructor123'), 'instructor');
-insertUser.run('Bob Student', 'bob@lms.com', hash('student123'), 'student');
-
-const instructor = db.prepare("SELECT id FROM users WHERE email='alice@lms.com'").get();
-
-const insertCourse = db.prepare(
-  `INSERT INTO courses
-  (title, description, short_description, what_you_will_learn, thumbnail, category, instructor_id)
-  VALUES (?, ?, ?, ?, ?, ?, ?)`
-);
 
 const courses = [
   {
@@ -102,21 +78,6 @@ const courses = [
     category: 'JavaScript',
   },
 ];
-
-for (const c of courses) {
-  insertCourse.run(c.title, c.description, c.short, c.learn, c.thumbnail, c.category, instructor.id);
-}
-
-const allCourses = db.prepare('SELECT id, title, category FROM courses').all();
-
-const insertSection = db.prepare(
-  'INSERT INTO sections (course_id, title, order_number) VALUES (?, ?, ?)'
-);
-const insertLesson = db.prepare(
-  `INSERT INTO lessons
-  (section_id, title, order_number, youtube_url, duration_seconds)
-  VALUES (?, ?, ?, ?, ?)`
-);
 
 const seededLessonsByKey = {
   java: {
@@ -329,31 +290,93 @@ const seededLessonsByKey = {
   },
 };
 
-for (const course of allCourses) {
-  insertSection.run(course.id, 'Getting Started', 1);
-  insertSection.run(course.id, 'Core Concepts', 2);
+async function runSeed() {
+  await initDb();
 
-  const sections = db
-    .prepare('SELECT id, order_number FROM sections WHERE course_id = ? ORDER BY order_number')
-    .all(course.id);
+  const existingRows = await query('SELECT COUNT(*) as count FROM users');
+  const existing = Number(existingRows[0]?.count || 0);
+  if (existing > 0) {
+    console.log('Seed skipped: data already exists.');
+    await closePool();
+    return;
+  }
 
-  const key = courses.find((c) => c.title === course.title)?.key;
-  const categoryData = seededLessonsByKey[key];
+  await query('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)', [
+    'Admin User',
+    'admin@lms.com',
+    hash('admin123'),
+    'admin',
+  ]);
+  await query('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)', [
+    'Alice Instructor',
+    'alice@lms.com',
+    hash('instructor123'),
+    'instructor',
+  ]);
+  await query('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)', [
+    'Bob Student',
+    'bob@lms.com',
+    hash('student123'),
+    'student',
+  ]);
 
-  categoryData.section1.forEach((lesson, idx) => {
-    insertLesson.run(sections[0].id, lesson.title, idx + 1, lesson.youtube_url, lesson.duration_seconds);
-  });
+  const instructorRows = await query("SELECT id FROM users WHERE email='alice@lms.com' LIMIT 1");
+  const instructor = instructorRows[0];
 
-  categoryData.section2.forEach((lesson, idx) => {
-    insertLesson.run(sections[1].id, lesson.title, idx + 1, lesson.youtube_url, lesson.duration_seconds);
-  });
+  for (const c of courses) {
+    await query(
+      `INSERT INTO courses
+      (title, description, short_description, what_you_will_learn, thumbnail, category, instructor_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [c.title, c.description, c.short, c.learn, c.thumbnail, c.category, instructor.id]
+    );
+  }
+
+  const allCourses = await query('SELECT id, title, category FROM courses');
+
+  for (const course of allCourses) {
+    await query('INSERT INTO sections (course_id, title, order_number) VALUES (?, ?, ?)', [course.id, 'Getting Started', 1]);
+    await query('INSERT INTO sections (course_id, title, order_number) VALUES (?, ?, ?)', [course.id, 'Core Concepts', 2]);
+
+    const sections = await query('SELECT id, order_number FROM sections WHERE course_id = ? ORDER BY order_number', [course.id]);
+
+    const key = courses.find((c) => c.title === course.title)?.key;
+    const categoryData = seededLessonsByKey[key];
+
+    for (let idx = 0; idx < categoryData.section1.length; idx += 1) {
+      const lesson = categoryData.section1[idx];
+      await query(
+        `INSERT INTO lessons
+         (section_id, title, order_number, youtube_url, duration_seconds)
+         VALUES (?, ?, ?, ?, ?)`,
+        [sections[0].id, lesson.title, idx + 1, lesson.youtube_url, lesson.duration_seconds]
+      );
+    }
+
+    for (let idx = 0; idx < categoryData.section2.length; idx += 1) {
+      const lesson = categoryData.section2[idx];
+      await query(
+        `INSERT INTO lessons
+         (section_id, title, order_number, youtube_url, duration_seconds)
+         VALUES (?, ?, ?, ?, ?)`,
+        [sections[1].id, lesson.title, idx + 1, lesson.youtube_url, lesson.duration_seconds]
+      );
+    }
+  }
+
+  const studentRows = await query("SELECT id FROM users WHERE email='bob@lms.com' LIMIT 1");
+  const firstCourseRows = await query('SELECT id FROM courses ORDER BY id LIMIT 1');
+  await query('INSERT INTO enrollments (user_id, course_id) VALUES (?, ?)', [studentRows[0].id, firstCourseRows[0].id]);
+
+  console.log('Seed complete. Demo logins:');
+  console.log('admin@lms.com / admin123');
+  console.log('alice@lms.com / instructor123');
+  console.log('bob@lms.com / student123');
+  await closePool();
 }
 
-const student = db.prepare("SELECT id FROM users WHERE email='bob@lms.com'").get();
-const firstCourse = db.prepare('SELECT id FROM courses ORDER BY id LIMIT 1').get();
-db.prepare('INSERT INTO enrollments (user_id, course_id) VALUES (?, ?)').run(student.id, firstCourse.id);
-
-console.log('Seed complete. Demo logins:');
-console.log('admin@lms.com / admin123');
-console.log('alice@lms.com / instructor123');
-console.log('bob@lms.com / student123');
+runSeed().catch(async (err) => {
+  console.error('Seed failed:', err.message);
+  await closePool();
+  process.exit(1);
+});

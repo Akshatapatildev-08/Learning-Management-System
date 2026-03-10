@@ -10,7 +10,7 @@ This project is a full-stack Learning Management System that organizes YouTube v
 
 - Frontend: React + Vite
 - Backend: Node.js + Express
-- Database: SQLite (`better-sqlite3`)
+- Database: MySQL (`mysql2`) - compatible with Aiven MySQL
 
 ## Project Structure
 
@@ -32,13 +32,20 @@ This project is a full-stack Learning Management System that organizes YouTube v
 
 ```bash
 cd backend
-cp .env.example .env
 npm install
 npm run seed
 npm run dev
 ```
 
 Backend runs on `http://localhost:5000`.
+
+Required backend env:
+
+```bash
+PORT=5000
+JWT_SECRET=replace-with-strong-secret
+DATABASE_URL=mysql://<user>:<password>@<host>:<port>/defaultdb?ssl-mode=REQUIRED
+```
 
 ## Frontend Setup
 

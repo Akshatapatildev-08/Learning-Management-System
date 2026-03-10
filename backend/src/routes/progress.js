@@ -1,14 +1,14 @@
 import express from 'express';
-import db from '../db/index.js';
+import { query } from '../db/index.js';
 import { authRequired } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.get('/course/:courseId', authRequired, (req, res) => {
+router.get('/course/:courseId', authRequired, async (req, res) => {
   const courseId = Number(req.params.courseId);
 
-  const totals = db
-    .prepare(
+  try {
+    const totalsRows = await query(
       `SELECT
          (SELECT COUNT(*)
           FROM lessons l
@@ -16,24 +16,30 @@ router.get('/course/:courseId', authRequired, (req, res) => {
           WHERE s.course_id = ?) as total_lessons,
          (SELECT COUNT(*)
           FROM progress p
-          WHERE p.user_id = ? AND p.course_id = ? AND p.status = 'completed') as completed_lessons`
-    )
-    .get(courseId, req.user.id, courseId);
+          WHERE p.user_id = ? AND p.course_id = ? AND p.status = 'completed') as completed_lessons`,
+      [courseId, req.user.id, courseId]
+    );
+    const totals = totalsRows[0];
 
-  const lastWatched = db
-    .prepare('SELECT lesson_id FROM last_watched WHERE user_id = ? AND course_id = ?')
-    .get(req.user.id, courseId);
+    const lastWatchedRows = await query('SELECT lesson_id FROM last_watched WHERE user_id = ? AND course_id = ? LIMIT 1', [
+      req.user.id,
+      courseId,
+    ]);
 
-  const completion_percentage =
-    totals.total_lessons === 0 ? 0 : Math.round((totals.completed_lessons / totals.total_lessons) * 100);
+    const totalLessons = Number(totals.total_lessons || 0);
+    const completedLessons = Number(totals.completed_lessons || 0);
+    const completion_percentage = totalLessons === 0 ? 0 : Math.round((completedLessons / totalLessons) * 100);
 
-  res.json({
-    course_id: courseId,
-    completed_lessons: totals.completed_lessons,
-    total_lessons: totals.total_lessons,
-    completion_percentage,
-    last_watched_lesson_id: lastWatched?.lesson_id || null,
-  });
+    res.json({
+      course_id: courseId,
+      completed_lessons: completedLessons,
+      total_lessons: totalLessons,
+      completion_percentage,
+      last_watched_lesson_id: lastWatchedRows[0]?.lesson_id || null,
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to load progress' });
+  }
 });
 
 export default router;

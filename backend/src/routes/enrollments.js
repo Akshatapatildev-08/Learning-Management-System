@@ -1,10 +1,10 @@
 import express from 'express';
-import db from '../db/index.js';
+import { query } from '../db/index.js';
 import { authRequired } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.post('/', authRequired, (req, res) => {
+router.post('/', authRequired, async (req, res) => {
   const { course_id } = req.body;
   const courseId = Number(course_id);
 
@@ -13,26 +13,32 @@ router.post('/', authRequired, (req, res) => {
   }
 
   try {
-    db.prepare('INSERT INTO enrollments (user_id, course_id) VALUES (?, ?)').run(req.user.id, courseId);
+    await query('INSERT INTO enrollments (user_id, course_id) VALUES (?, ?)', [req.user.id, courseId]);
     return res.status(201).json({ message: 'Enrolled successfully' });
-  } catch {
-    return res.status(409).json({ message: 'Already enrolled or invalid course' });
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY' || err.code === 'ER_NO_REFERENCED_ROW_2') {
+      return res.status(409).json({ message: 'Already enrolled or invalid course' });
+    }
+    return res.status(500).json({ message: 'Enrollment failed' });
   }
 });
 
-router.get('/mine', authRequired, (req, res) => {
-  const courses = db
-    .prepare(
+router.get('/mine', authRequired, async (req, res) => {
+  try {
+    const courses = await query(
       `SELECT c.id, c.title, c.short_description, c.thumbnail, c.category,
               e.enrolled_at
        FROM enrollments e
        JOIN courses c ON c.id = e.course_id
        WHERE e.user_id = ?
-       ORDER BY e.enrolled_at DESC`
-    )
-    .all(req.user.id);
+       ORDER BY e.enrolled_at DESC`,
+      [req.user.id]
+    );
 
-  res.json(courses);
+    res.json(courses);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to load enrollments' });
+  }
 });
 
 export default router;

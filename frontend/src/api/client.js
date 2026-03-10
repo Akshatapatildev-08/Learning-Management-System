@@ -40,6 +40,7 @@ export const api = {
   courseById: (id) => request(`/courses/${id}`),
   courseLessons: (courseId) => request(`/courses/${courseId}/lessons`),
   enroll: (course_id) => request('/enrollments', { method: 'POST', body: JSON.stringify({ course_id }) }),
+  enrollmentsMine: () => request('/enrollments/mine'),
   learningByCourse: (courseId) => request(`/learning/course/${courseId}`),
   lessonById: (lessonId) => request(`/learning/lesson/${lessonId}`),
   markComplete: (lesson_id) => request('/learning/complete', { method: 'POST', body: JSON.stringify({ lesson_id }) }),
